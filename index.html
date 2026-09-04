@@ -89,7 +89,14 @@ header{background:radial-gradient(90% 120% at 20% -30%, rgba(0,252,84,.13), tran
 main{padding:4px 0 120px}
 .fam{font-family:var(--f-mono);font-size:10px;letter-spacing:.2em;text-transform:uppercase;
   color:var(--dim);padding:26px 0 8px;border-bottom:1px solid var(--line-soft)}
-.row{padding:15px 0;border-bottom:1px solid var(--line-soft)}
+.row{padding:15px 12px;margin:0 -12px;border-bottom:1px solid var(--line-soft);
+  cursor:pointer;border-left:3px solid transparent;transition:background .12s}
+.row.sel{background:rgba(0,252,84,.07);border-left-color:var(--acc)}
+.row.sel .nom{color:var(--acc)}
+.coche{float:right;margin-left:10px;width:22px;height:22px;border:1px solid var(--line);
+  border-radius:50%;display:inline-grid;place-items:center;font-size:12px;color:transparent}
+.row.sel .coche{border-color:var(--acc);background:var(--acc);color:#04120A}
+.aide{font-family:var(--f-mono);font-size:11px;color:var(--dim);padding:14px 0 0;letter-spacing:.04em}
 .tete{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
 .nom{font-family:var(--f-disp);font-weight:500;font-size:19px;line-height:1.2}
 .prix{font-family:var(--f-mono);font-size:16px;font-weight:600;color:var(--acc);
@@ -115,9 +122,10 @@ main{padding:4px 0 120px}
   transform:translateY(115%);transition:transform .22s ease;
   padding-bottom:env(safe-area-inset-bottom)}
 .panier.on{transform:none}
-.panier .wrap{display:flex;gap:8px;align-items:center;padding:12px 16px}
+.panier .wrap{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 16px}
 .panier p{margin:0;flex:1;font-family:var(--f-mono);font-size:12px;color:var(--muted);line-height:1.3}
 .panier p b{display:block;color:var(--acc);font-size:15px;font-variant-numeric:tabular-nums}
+.panier .envoi{flex:1 1 auto;min-width:0}
 .panier button{height:48px;padding:0 16px;border-radius:3px;font-family:var(--f-mono);
   font-size:12px;letter-spacing:.08em;text-transform:uppercase;flex:0 0 auto}
 .vider{border:1px solid var(--line);color:var(--muted);padding:0 14px}
@@ -127,6 +135,11 @@ footer{border-top:1px solid var(--line);padding:24px 0 40px;color:var(--dim);
   font-family:var(--f-mono);font-size:11px;line-height:1.9}
 footer a{color:var(--acc-dim)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:560px){
+  .panier p{flex:1 0 100%;margin-bottom:2px}
+  .panier p b{display:inline;font-size:13px;margin-right:4px}
+  .vider{flex:0 0 auto}
+}
 @media (min-width:720px){
   .brand img{width:52px;height:52px} .brand h1{font-size:32px}
   .panneau{left:50%;right:auto;bottom:auto;top:64px;transform:translate(-50%,-8px) scale(.98);
@@ -175,7 +188,7 @@ footer a{color:var(--acc-dim)}
 
 <div class="panier" id="panier">
   <div class="wrap">
-    <p><b id="pnb">0</b> sélectionné(s)</p>
+    <p><b id="pnb">0</b> <span id="pmot">annonce sélectionnée</span></p>
     <button class="vider" id="vider">Vider</button>
     <button class="envoi" id="envoi">Demander sur Instagram</button>
   </div>
@@ -186,8 +199,8 @@ const DATA = [{"nom": "Claquettes Adidas", "fam": "Claquettes", "tailles": [{"t"
 const $ = id => document.getElementById(id);
 const liste = $('liste'), panneau = $('panneau'), voile = $('voile'), panier = $('panier');
 
-let sel = new Map();
-try { const s = localStorage.getItem('sel-eliott'); if (s) sel = new Map(JSON.parse(s)); } catch (e) {}
+let sel = new Map();   // nom du modèle -> [tailles choisies] ([] = pas de taille précisée)
+try { const s = localStorage.getItem('sel-eliott-v2'); if (s) sel = new Map(JSON.parse(s)); } catch (e) {}
 
 let dernierNb = 0;
 const F = { q:'', fam:'', tailles:new Set(), etat:'', note:0, boite:'', pmax:0, tri:'nom' };
@@ -305,17 +318,22 @@ function render(){
     const bT = bts.length === 1 ? ' · ' + (bts[0] === 'Avec' ? 'avec boîte' : 'sans boîte') : '';
     const mix = bts.length > 1;
 
-    out += '<article class="row"><div class="tete"><div class="nom">' + esc(g.nom) + '</div>' + px + '</div>'
+    const choisi = sel.has(g.nom);
+    out += '<article class="row' + (choisi ? ' sel' : '') + '" data-nom="' + esc(g.nom) + '">'
+      + '<div class="tete"><div class="nom">' + esc(g.nom) + '</div>'
+      + '<div>' + px + '</div></div>'
       + '<div class="meta">' + esc(etats) + nT + bT + ' · ' + dispo + ' pièce' + (dispo > 1 ? 's' : '') + '</div>'
       + '<div class="sizes">' + tailles.map(t => {
-          const k = g.nom + ' | ' + t.t;
           const cl = t.n ? (t.n >= 9 ? 'n-a' : t.n >= 7 ? 'n-b' : 'n-c') : '';
           const nb = t.n ? '<span class="note ' + cl + '">' + t.n + '</span>' : '';
           const bb = (mix && t.b) ? '<span class="bte">' + (t.b === 'Avec' ? 'avec b.' : 'sans b.') + '</span>' : '';
-          return '<button class="sz" data-k="' + esc(k) + '" aria-pressed="'
-               + (sel.has(k) ? 'true' : 'false') + '">' + esc(t.t)
+          const pris = choisi && sel.get(g.nom).includes(t.t);
+          return '<button class="sz" data-t="' + esc(t.t) + '" aria-pressed="'
+               + (pris ? 'true' : 'false') + '">' + esc(t.t)
                + ' <em>×' + t.q + '</em>' + nb + bb + '</button>';
-        }).join('') + '</div></article>';
+        }).join('') + '</div>'
+      + (tailles.length > 1 ? '<div class="aide">Touche l\'annonce pour la sélectionner, ou une taille précise.</div>' : '')
+      + '</article>';
   }
   liste.innerHTML = out || '<p class="vide">Aucun article ne correspond.<br>Essaie d\'enlever un filtre.</p>';
 
@@ -339,24 +357,33 @@ function LAB(f){ const o = CFG.fams.find(x => x[0] === f); return o ? o[1] : f; 
 
 /* ---------- sélection ---------- */
 liste.addEventListener('click', e => {
-  const b = e.target.closest('.sz'); if (!b) return;
-  const k = b.dataset.k;
-  if (sel.has(k)){ sel.delete(k); b.setAttribute('aria-pressed', 'false'); }
-  else { sel.set(k, 1); b.setAttribute('aria-pressed', 'true'); }
-  maj();
+  const art = e.target.closest('.row'); if (!art) return;
+  const nom = art.dataset.nom;
+  const chip = e.target.closest('.sz');
+  if (chip){
+    const t = chip.dataset.t;
+    const cur = sel.get(nom) || [];
+    const i = cur.indexOf(t);
+    if (i >= 0){
+      cur.splice(i, 1);
+      if (!cur.length && sel.has(nom)) sel.delete(nom); else sel.set(nom, cur);
+    } else { cur.push(t); sel.set(nom, cur); }
+  } else {
+    if (sel.has(nom)) sel.delete(nom); else sel.set(nom, []);
+  }
+  render();
 });
 function maj(){
   $('pnb').textContent = sel.size;
+  $('pmot').textContent = sel.size > 1 ? 'annonces sélectionnées' : 'annonce sélectionnée';
   panier.classList.toggle('on', sel.size > 0);
-  try { localStorage.setItem('sel-eliott', JSON.stringify([...sel])); } catch (e) {}
+  try { localStorage.setItem('sel-eliott-v2', JSON.stringify([...sel])); } catch (e) {}
 }
 $('vider').addEventListener('click', () => { sel.clear(); render(); });
 
 function message(){
-  const l = [...sel.keys()].map(k => {
-    const [nom, taille] = k.split(' | ');
-    return '- ' + nom + ' (taille ' + taille + ')';
-  });
+  const l = [...sel.entries()].map(([nom, t]) =>
+    '- ' + nom + (t && t.length ? ' (taille ' + t.join(', ') + ')' : ''));
   return 'Salut ! Je suis intéressé par :\n' + l.join('\n')
        + '\n\nJe peux avoir plus de photos ?';
 }
