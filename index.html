@@ -97,6 +97,13 @@ main{padding:4px 0 120px}
   border-radius:50%;display:inline-grid;place-items:center;font-size:12px;color:transparent}
 .row.sel .coche{border-color:var(--acc);background:var(--acc);color:#04120A}
 .aide{font-family:var(--f-mono);font-size:11px;color:var(--dim);padding:14px 0 0;letter-spacing:.04em}
+.cta-int{width:100%;margin-top:13px;min-height:46px;border-radius:3px;cursor:pointer;
+  font-family:var(--f-mono);font-size:13px;letter-spacing:.05em;
+  background:transparent;color:var(--acc);border:1px solid var(--acc);
+  transition:background .12s,color .12s,border-color .12s}
+.cta-int:hover{background:var(--acc-soft)}
+.row.sel .cta-int{background:var(--acc);color:#04120A;border-color:var(--acc);font-weight:600}
+.row.sel .cta-int:hover{background:var(--acc)}
 .tete{display:flex;justify-content:space-between;align-items:baseline;gap:14px}
 .nom{font-family:var(--f-disp);font-weight:500;font-size:19px;line-height:1.2}
 .prix{font-family:var(--f-mono);font-size:16px;font-weight:600;color:var(--acc);
@@ -316,7 +323,10 @@ function render(){
                + (pris ? 'true' : 'false') + '">' + esc(t.t)
                + ' <em>×' + t.q + '</em>' + nb + bb + '</button>';
         }).join('') + '</div>'
-      + (tailles.length > 1 ? '<div class="aide">Touche l\'annonce pour la sélectionner, ou une taille précise.</div>' : '')
+      + (tailles.length > 1 ? '<div class="aide">Touche une taille pour préciser laquelle t\'intéresse.</div>' : '')
+      + '<button class="cta-int" type="button">'
+      + (choisi ? '\u2713 Sélectionné' : '+ Je suis intéressé')
+      + '</button>'
       + '</article>';
   }
   liste.innerHTML = out || '<p class="vide">Aucun article ne correspond.<br>Essaie d\'enlever un filtre.</p>';
